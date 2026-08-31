@@ -2,7 +2,10 @@
 venv/
 .venv/
 env/
+backend/venv/
 __pycache__/
+*/__pycache__/
+*/*/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -14,9 +17,14 @@ htmlcov/
 
 # Node / Frontend
 node_modules/
+frontend/node_modules/
 dist/
+frontend/dist/
 .npm
 *.tsbuildinfo
+
+# Vercel
+.vercel
 
 # Environment & secrets
 .env

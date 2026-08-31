@@ -106,23 +106,44 @@ docker-compose up --build
 
 This starts both frontend and backend.
 
-## Environment Variables
+## Vercel Single-Project Deployment
 
-Copy `.env.example` to `.env`:
+SANDHI is configured to deploy as a **single project on Vercel** combining the React/Vite SPA and FastAPI Python serverless backend.
+
+### Option 1: Deploy via Vercel CLI
 
 ```bash
-cp .env.example .env
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy directly from repository root
+vercel
+
+# Deploy to production
+vercel --prod
 ```
+
+### Option 2: Deploy via GitHub / Vercel Dashboard
+
+1. Push this repository to GitHub: `https://github.com/Tomeseto/Sandhi.git`
+2. Import the repository in [Vercel Dashboard](https://vercel.com/new).
+3. Vercel automatically detects the configuration from `vercel.json`, `package.json`, and `requirements.txt`:
+   - **Build Command**: `cd frontend && npm install && npm run build` (or root `npm run build`)
+   - **Output Directory**: `frontend/dist`
+   - **Serverless API**: `api/index.py` handles all `/api/*` requests
+4. Click **Deploy**.
+
+### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SANDHI_MODE` | `demo` | `demo` or `live` |
-| `DATABASE_URL` | `sqlite:///sandhi.db` | Database connection |
-| `CORS_ORIGINS` | `http://localhost:5173` | Allowed CORS origins |
+| `SANDHI_MODE` | `demo` | `demo` (seeded offline fixtures) or `live` |
+| `CORS_ORIGINS` | `*` | Allowed CORS origins (comma-separated) |
 
-No API keys are required for the demo.
+> **Note**: Zero external API keys or database connection strings are required. SANDHI operates 100% deterministically in DEMO/OFFLINE mode on Vercel.
 
-## Development Commands
+## Local Development Commands
+
 
 ### Backend
 

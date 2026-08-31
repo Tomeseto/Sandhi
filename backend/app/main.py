@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.models import (
@@ -36,19 +36,21 @@ app = FastAPI(
 )
 
 # CORS
-cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(",")
+cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=cors_origins if "*" not in cors_origins else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+router = APIRouter()
+
 
 # --- Health ---
 
-@app.get("/health", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse)
 def health():
     mode = os.environ.get("SANDHI_MODE", "demo")
     return HealthResponse(status="ok", mode=mode, version="0.1.0")
@@ -56,12 +58,12 @@ def health():
 
 # --- Trips ---
 
-@app.get("/trips", response_model=list[Trip])
+@router.get("/trips", response_model=list[Trip])
 def list_trips():
     return store.list_trips()
 
 
-@app.get("/trips/{trip_id}", response_model=Trip)
+@router.get("/trips/{trip_id}", response_model=Trip)
 def get_trip(trip_id: str):
     trip = store.get_trip(trip_id)
     if trip is None:
@@ -69,7 +71,7 @@ def get_trip(trip_id: str):
     return trip
 
 
-@app.post("/trips/{trip_id}/reset")
+@router.post("/trips/{trip_id}/reset")
 def reset_trip(trip_id: str):
     if not store.reset_trip(trip_id):
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -78,7 +80,7 @@ def reset_trip(trip_id: str):
 
 # --- Graph ---
 
-@app.get("/trips/{trip_id}/graph", response_model=GraphResponse)
+@router.get("/trips/{trip_id}/graph", response_model=GraphResponse)
 def get_graph(trip_id: str):
     trip = store.get_trip(trip_id)
     if trip is None:
@@ -112,7 +114,7 @@ def get_graph(trip_id: str):
 
 # --- Disruptions ---
 
-@app.post("/trips/{trip_id}/disruptions")
+@router.post("/trips/{trip_id}/disruptions")
 def create_disruption(trip_id: str, request: DisruptionRequest):
     disruption = store.create_disruption(
         trip_id=trip_id,
@@ -126,14 +128,14 @@ def create_disruption(trip_id: str, request: DisruptionRequest):
     return disruption
 
 
-@app.get("/trips/{trip_id}/disruptions")
+@router.get("/trips/{trip_id}/disruptions")
 def get_disruptions(trip_id: str):
     return store.get_disruptions(trip_id)
 
 
 # --- Cascade ---
 
-@app.get("/trips/{trip_id}/cascade")
+@router.get("/trips/{trip_id}/cascade")
 def get_cascade(trip_id: str):
     cascade = store.get_cascade(trip_id)
     if cascade is None:
@@ -143,28 +145,28 @@ def get_cascade(trip_id: str):
 
 # --- Deadlines ---
 
-@app.get("/trips/{trip_id}/deadlines", response_model=list[Deadline])
+@router.get("/trips/{trip_id}/deadlines", response_model=list[Deadline])
 def get_deadlines(trip_id: str):
     return store.get_deadlines(trip_id)
 
 
 # --- Entitlements ---
 
-@app.get("/trips/{trip_id}/entitlements", response_model=list[Entitlement])
+@router.get("/trips/{trip_id}/entitlements", response_model=list[Entitlement])
 def get_entitlements(trip_id: str):
     return store.get_entitlements(trip_id)
 
 
 # --- Recovery Options ---
 
-@app.get("/trips/{trip_id}/recovery-options", response_model=list[RecoveryOption])
+@router.get("/trips/{trip_id}/recovery-options", response_model=list[RecoveryOption])
 def get_recovery_options(trip_id: str):
     return store.get_recovery_options(trip_id)
 
 
 # --- Evidence ---
 
-@app.get("/evidence/{evidence_id}", response_model=Evidence)
+@router.get("/evidence/{evidence_id}", response_model=Evidence)
 def get_evidence(evidence_id: str):
     ev = store.get_evidence(evidence_id)
     if ev is None:
@@ -172,6 +174,12 @@ def get_evidence(evidence_id: str):
     return ev
 
 
-@app.get("/evidence", response_model=list[Evidence])
+@router.get("/evidence", response_model=list[Evidence])
 def list_evidence():
     return list(store.evidence.values())
+
+
+# Register routes at both root and /api for seamless local + Vercel routing
+app.include_router(router)
+app.include_router(router, prefix="/api")
+
